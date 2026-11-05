@@ -1,0 +1,114 @@
+/* Environmental light, pools, and shadows. Colors come from variables set by the active preset. */
+
+.ct-ambient {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(560px 300px at 50% 42%, var(--ct-softbox), transparent 70%),
+    linear-gradient(180deg, var(--ct-ambient-core), transparent 48%),
+    radial-gradient(420px 160px at 50% 82%, var(--ct-fill), transparent 72%);
+  opacity: var(--ct-ambient-opacity, 1);
+  transition: opacity var(--ct-duration) var(--ct-ease);
+}
+
+.ct-spot,
+.ct-contact,
+.ct-sheen,
+.ct-ground {
+  transition-property: cx, cy, rx, ry, opacity;
+  transition-duration: var(--ct-duration);
+  transition-timing-function: var(--ct-ease);
+}
+
+.ct-scene[data-motion="reduced"] .ct-spot,
+.ct-scene[data-motion="reduced"] .ct-contact,
+.ct-scene[data-motion="reduced"] .ct-sheen,
+.ct-scene[data-motion="reduced"] .ct-ambient,
+.ct-scene[data-motion="reduced"] .ct-node,
+.ct-scene[data-motion="reduced"] .ct-node-press {
+  transition-duration: 1ms;
+}
+
+.ct-debug {
+  position: absolute;
+  inset: 0;
+  width: 800px;
+  height: 520px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ct-debug-bounds,
+.ct-debug-table,
+.ct-debug-anchor,
+.ct-debug-spot,
+.ct-debug-spot-center,
+.ct-debug-contact {
+  fill: none;
+  stroke: #3d5a6c;
+}
+
+.ct-debug-bounds {
+  stroke-dasharray: 6 5;
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.ct-debug-table {
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.ct-debug-anchor {
+  stroke-width: 1.25;
+}
+
+.ct-debug-spot {
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.ct-debug-spot-center {
+  fill: #3d5a6c;
+  stroke: none;
+}
+
+.ct-debug-contact {
+  fill: none;
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+.ct-debug .is-focused .ct-debug-anchor,
+.ct-debug .is-focused .ct-debug-spot {
+  stroke: #1d4e6e;
+  opacity: 0.95;
+}
+
+.ct-debug-label {
+  fill: #1d4e6e;
+  font-size: 11px;
+  font-family: "Söhne", "Sohne", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  paint-order: stroke;
+  stroke: #f4f7fa;
+  stroke-width: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct-scene *,
+  .ct-scene *::before,
+  .ct-scene *::after,
+  .ct-node,
+  .ct-node-press,
+  .ct-btn {
+    transition-duration: 1ms !important;
+  }
+
+  .ct-node:active .ct-node-press,
+  .ct-btn:active {
+    transform: none;
+  }
+}
