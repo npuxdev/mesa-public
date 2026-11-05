@@ -1,5 +1,5 @@
 import {ContractError, type FixtureData, type Mutation, type Scenario, type Scope} from './contracts.js';
-import {workflows,snapshot,authorDigest,validation,uid,appendEvent,clock,minutes,reportDigest,reportSnapshot,allowedActions, type Entity,type Transition,type Inject,type Objective} from './workflow-model.js';
+import {workflows,snapshot,authorDigest,validation,uid,appendEvent,clock,minutes,releaseDueInjects,reportDigest,reportSnapshot,allowedActions, type Entity,type Transition,type Inject,type Objective} from './workflow-model.js';
 import {parsePackage} from './workflow-package.js';
 import {glasshouseEvidence,glasshouseActions} from './glasshouse.js';
 
@@ -9,6 +9,29 @@ const list=(v:unknown)=>Array.isArray(v)?v.map(String):String(v||'').split(',').
 const number=(v:unknown,min=0,max=480)=>{const n=Number(v);if(!Number.isFinite(n)||n<min||n>max)fail('VALIDATION',`Value must be between ${min} and ${max}.`);return n;};
 export function workflowCommand(d:FixtureData,scope:Scope,m:Mutation,g:Guards):boolean {
  const {type,resourceId:id,payload:p}=m,{need,version,required}=g,w=workflows(d);
+ if(type==='simulation.launch'){
+  need('facilitate');if(p.disclosed!=='yes')fail('DISCLOSURE','Confirm that every role is an AI actor before starting the simulation.');
+  const pack=d.scenarios.find(s=>s.id===id);if(!pack||pack.status!=='published'||!pack.available)fail('UNAVAILABLE','Choose a licensed published scenario.');
+  const author=w.authors[pack.id];if(!author?.definition.entities.some(e=>e.kind==='human_role'))fail('SCHEMA','The published scenario needs at least one role for the cast.');
+  const key=m.idempotencyKey.replace(/[^a-zA-Z0-9]/g,'').slice(0,12);if(!key)fail('VALIDATION','A request ID is required.');
+  const sessionId=`sim-${key}`;if(d.sessions.some(s=>s.id===sessionId))return true;
+  const roles=author.definition.entities.filter(e=>e.kind==='human_role');
+  d.sessions.push({id:sessionId,exerciseId:`ex-${key}`,title:`${pack.title} · AI simulation`,scenarioId:pack.id,discipline:pack.discipline,purpose:pack.purpose,mode:pack.mode,status:'lobby',when:new Date().toISOString(),owner:'Jordan Davis',role:'Observer',duration:pack.duration,revision:pack.revision,simulationTime:'00:00:00',wallTime:'00:00:00',sequence:0});
+  const session=d.sessions.at(-1)!;const x=workflows(d).exercises[session.id];
+  x.roster=roles.map(r=>({id:`ai-${r.id}`,name:`AI · ${r.name}`,role:r.id,observer:false,verified:true,ready:true,disclosed:true}));
+  x.objectives=author.definition.objectives.map(o=>o.id);
+  x.pinned=snapshot(pack,author,'AI simulation pinned publication');
+  x.world=Object.fromEntries(author.definition.entities.map(e=>[e.id,e.initial]));
+  x.clock='stepped';x.aiSimulation=true;
+  x.injects=author.definition.injects.map(i=>({definition:structuredClone(i),state:'queued',minute:i.minute}));
+  x.events=[];x.messages=[];x.assessmentImpact=['Full AI cast. Actor actions are simulation artifacts and are excluded from participant scoring.'];
+  const progress=w.improvement??={views:[],retests:{},assistance:{}};w.improvement=progress;progress.assistance[session.id]='ai';
+  session.status='running';session.revision=pack.revision;
+  appendEvent(d,session.id,'AI simulation started','Every role is an AI actor. You are observing. These actions are not participant performance.','situation');
+  releaseDueInjects(d,session.id,true);
+  x.version++;
+  return true;
+ }
  if(type.startsWith('scenario.')||type==='package.import'){
   need('author');
   if(type==='package.import'){
@@ -75,7 +98,7 @@ export function workflowCommand(d:FixtureData,scope:Scope,m:Mutation,g:Guards):b
   }else if(type==='session.pause'||type==='session.resume'||type==='session.end'||type==='session.cancel'||type==='session.archive'){
    need('facilitate');if(type==='session.pause'){active();s.status='paused';}else if(type==='session.resume'){if(s.status!=='paused')fail('INVALID_STATE','Session is not paused.');s.status='running';}else if(type==='session.end'){if(!['running','paused'].includes(s.status))fail('INVALID_STATE','Only active sessions can end.');s.status='ended';x.assessmentImpact.push(`Session ended · ${required('rationale')}`);}else if(type==='session.cancel'){if(!['draft','scheduled','lobby'].includes(s.status))fail('INVALID_STATE','Only prelaunch sessions can be canceled.');s.status='canceled';required('rationale');}else{if(!['ended','review'].includes(s.status))fail('INVALID_STATE','Complete the session before archiving.');s.status='archived';}event(type.replace('session.','Session '),String(p.rationale||'Lifecycle transition recorded.'));
   }else if(type==='session.step'){
-   need('facilitate');active();if(x.clock!=='stepped')fail('CLOCK_POLICY','Manual stepping is unavailable for this clock policy.');const next=minutes(s.simulationTime)+number(p.minutes,1,60);if(next>(x.pinned?.definition.termination||480))fail('TERMINATION','This step exceeds the pinned termination window. End the exercise explicitly.');s.simulationTime=clock(next);event('Clock advanced',`Facilitator stepped ${p.minutes} simulation minutes.`);
+   need('facilitate');if(s.status!=='running'&&!(x.aiSimulation&&s.status==='paused'))fail('PAUSED','This operation requires a running session.');if(x.clock!=='stepped')fail('CLOCK_POLICY','Manual stepping is unavailable for this clock policy.');const next=minutes(s.simulationTime)+number(p.minutes,1,60);if(next>(x.pinned?.definition.termination||480))fail('TERMINATION','This step exceeds the pinned termination window. End the exercise explicitly.');s.simulationTime=clock(next);event(x.aiSimulation?'Simulation time skipped':'Clock advanced',x.aiSimulation?`Skipped ${p.minutes} simulation minutes. Due cues are released. Skipping does not call the model.`:`Facilitator stepped ${p.minutes} simulation minutes.`);if(x.aiSimulation)releaseDueInjects(d,s.id,true);
   }else if(type==='inject.release'||type==='inject.delay'||type==='inject.cancel'){
    need('facilitate');active();const i=x.injects.find(i=>i.definition.id===required('inject'));if(!i||i.state!=='queued')fail('INVALID_STATE','Inject is not queued.');if(type==='inject.release'){if(i.definition.trigger==='time'&&minutes(s.simulationTime)<i.minute)fail('NOT_ELIGIBLE','The simulation deadline has not been reached.');if(i.definition.trigger==='condition'&&!x.events.some(e=>e.kind===i.definition.condition))fail('NOT_ELIGIBLE','The registered condition has not executed.');i.state='released';if(i.definition.artifact)d.evidence.push({id:uid('artifact'),sessionId:s.id,audiences:i.definition.audiences,title:i.definition.title,type:'document',time:s.simulationTime,version:'1',source:'Released synthetic scenario artifact',content:i.definition.artifact,downloadable:true});appendEvent(d,s.id,i.definition.title,i.definition.body,'inject',i.definition.audiences);x.messages.push({id:uid('msg'),source:'Synthetic scenario actor',thread:i.definition.channel,text:i.definition.body,minute:minutes(s.simulationTime),attachment:i.definition.artifact,status:'delivered',audiences:[...i.definition.audiences]});}else if(type==='inject.delay'){i.minute+=number(p.minutes,1,60);x.assessmentImpact.push(`Inject delayed: ${i.definition.title} · ${required('rationale')}`);}else{i.state='canceled';x.assessmentImpact.push(`Inject canceled: ${i.definition.title} · ${required('rationale')}`);}event(type,'Pinned criteria unchanged; pacing change recorded.');
   }else if(type==='inject.manual'){

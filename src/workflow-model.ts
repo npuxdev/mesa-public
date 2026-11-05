@@ -9,7 +9,7 @@ export type ScenarioSnapshot={version:number;title:string;summary:string;difficu
 export type AuthorState={definition:Definition;history:ScenarioSnapshot[];base?:ScenarioSnapshot;checks:{severity:'blocker'|'warning';object:string;message:string}[];validatedDigest?:string;dryRun?:{digest:string;trace:string[];state:'complete'|'canceled'};proposal?:{title:string;summary:string;status:'proposed'|'accepted'|'rejected';baseDigest:string};releaseNotes:string};
 export type Assignment={id:string;name:string;role:string;observer:boolean;verified:boolean;ready:boolean;disclosed:boolean};
 export type RecordedEvent={id:string;sequence:number;minute:number;title:string;detail:string;audiences:string[];kind:string;state:Record<string,string>};
-export type ExerciseState={version:number;roster:Assignment[];objectives:string[];meeting:string;timezone:string;clock:'stepped'|'realtime';baseline:string;pinned?:ScenarioSnapshot;world:Record<string,string>;events:RecordedEvent[];injects:{definition:Inject;state:'queued'|'released'|'canceled';minute:number}[];messages:{id:string;thread:string;source:string;text:string;minute:number;attachment:string;status:'delivered'|'unknown';audiences?:string[]}[];commands:{id:string;action:string;target:string;status:string;eventIds:string[]}[];decisions:{id:string;question:string;owner:string;rationale:string;contributors:string;evidence:string[];dissent:string;state:'committed'|'superseded';previous?:string}[];handoffs:{id:string;task:string;owner:string;state:'proposed'|'acknowledged'|'complete'}[];teamNote:string;teamVersion:number;teamHistory:string[];requests:{id:string;intent:string;state:'pending'|'resolved';resolution?:string;rationale?:string}[];reflections:{subject:string;text:string}[];assessmentImpact:string[]};
+export type ExerciseState={version:number;roster:Assignment[];objectives:string[];meeting:string;timezone:string;clock:'stepped'|'realtime';baseline:string;pinned?:ScenarioSnapshot;aiSimulation?:boolean;world:Record<string,string>;events:RecordedEvent[];injects:{definition:Inject;state:'queued'|'released'|'canceled';minute:number}[];messages:{id:string;thread:string;source:string;text:string;minute:number;attachment:string;status:'delivered'|'unknown';audiences?:string[]}[];commands:{id:string;action:string;target:string;status:string;eventIds:string[]}[];decisions:{id:string;question:string;owner:string;rationale:string;contributors:string;evidence:string[];dissent:string;state:'committed'|'superseded';previous?:string}[];handoffs:{id:string;task:string;owner:string;state:'proposed'|'acknowledged'|'complete'}[];teamNote:string;teamVersion:number;teamHistory:string[];requests:{id:string;intent:string;state:'pending'|'resolved';resolution?:string;rationale?:string}[];reflections:{subject:string;text:string}[];assessmentImpact:string[]};
 export type FindingState={inspected:string[];history:{version:number;state:string;claim:string;reason:string}[];resolution?:string;sessionId:string;objectiveId?:string};
 export type ReportSection={id:string;title:string;body:string;audience:'Program members'|'Review team'|'Participant self'};
 export type ReportSnapshot={revision:string;title:string;summary:string;audience:string;sections:ReportSection[];findings:{id:string;title:string;claim:string;evidence:{id:string;title:string;content:string}[]}[];reviewer:string;date:string;digest:string;status:'published'|'superseded'|'withdrawn'};
@@ -48,6 +48,23 @@ export function workflows(d:FixtureData):WorkflowData {
 export function minutes(time:string){const [h,m,s]=time.split(':').map(Number);return h*60+m+(s||0)/60;}
 export function clock(minute:number){const s=Math.round(minute*60);return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 export function appendEvent(d:FixtureData,sessionId:string,title:string,detail:string,kind='system',audiences?:string[]){const s=d.sessions.find(s=>s.id===sessionId)!;const x=workflows(d).exercises[sessionId];s.sequence++;const event:RecordedEvent={id:uid('event'),sequence:s.sequence,minute:minutes(s.simulationTime),title,detail,kind,audiences:audiences||x.roster.map(r=>r.role),state:structuredClone(x.world)};x.events.push(event);return event;}
+/** Release queued cues whose clock or registered condition is already satisfied. Manual cues stay queued unless this is an observer simulation. */
+export function releaseDueInjects(d:FixtureData,sessionId:string,includeManual=false):string[]{
+ const s=d.sessions.find(s=>s.id===sessionId),x=workflows(d).exercises[sessionId];if(!s||!x)return [];
+ const now=minutes(s.simulationTime),ids:string[]=[];
+ for(const i of x.injects){
+  if(i.state!=='queued')continue;
+  const timed=(i.definition.trigger==='time'||includeManual&&i.definition.trigger==='manual')&&i.minute<=now;
+  const conditional=i.definition.trigger==='condition'&&!!i.definition.condition&&x.events.some(e=>e.kind===i.definition.condition);
+  if(!timed&&!conditional)continue;
+  i.state='released';
+  if(i.definition.artifact)d.evidence.push({id:uid('artifact'),sessionId:s.id,audiences:i.definition.audiences,title:i.definition.title,type:'document',time:s.simulationTime,version:'1',source:'Released synthetic scenario artifact',content:i.definition.artifact,downloadable:true});
+  appendEvent(d,s.id,i.definition.title,i.definition.body,'inject',i.definition.audiences);
+  x.messages.push({id:uid('msg'),source:'Synthetic scenario actor',thread:i.definition.channel,text:i.definition.body,minute:minutes(s.simulationTime),attachment:i.definition.artifact,status:'delivered',audiences:[...i.definition.audiences]});
+  ids.push(i.definition.id);
+ }
+ return ids;
+}
 export function assignedRole(x:ExerciseState,scope:Scope){return scope.persona==='observer'?'observer':x.roster.find(r=>r.id==='p-self')?.role||'';}
 export function validation(s:Scenario,a:AuthorState,d:FixtureData):AuthorState['checks'] {
  const checks:AuthorState['checks']=[],add=(object:string,message:string,severity:'blocker'|'warning'='blocker')=>checks.push({object,message,severity});const def=a.definition;

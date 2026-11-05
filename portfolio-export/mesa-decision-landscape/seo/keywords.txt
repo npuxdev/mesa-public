@@ -1,0 +1,1 @@
+scenario graph, versioned workflow, command receipts, immutable publication, evidence review, human-in-the-loop AI, scope projection, design tokens, TypeScript, React, Vite, local Supabase, readiness exercises, progressive disclosure, not-observed metrics

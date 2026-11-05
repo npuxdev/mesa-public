@@ -1,0 +1,13 @@
+flowchart TD
+  V["scenario.validate"] --> Q{"Any blocker"}
+  Q -->|yes| I["validation invalid, digest cleared"]
+  Q -->|no| D["validatedDigest equals authorDigest"]
+  D --> P["scenario.publish posts the preview digest"]
+  P --> M{"Posted digest still matches"}
+  M -->|no| C["CONFLICT, record unchanged"]
+  M -->|yes| S["status published, snapshot stored"]
+  S --> L["Later edits require scenario.fork"]
+  F["finding.approve"] --> E{"Evidence inspected and level is 0 to 3"}
+  E -->|no| X["MISSING_EVIDENCE"]
+  E -->|yes| A["Finding approved"]
+  A --> RP["report.approve digest then report.publish snapshot"]

@@ -4,13 +4,33 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "check": "tsc --noEmit",
-    "dev": "npm run build && node server.mjs",
+    "build:domain": "tsc -p tsconfig.domain.json",
+    "build": "npm run build:domain && next build",
+    "check": "tsc -p tsconfig.domain.json --noEmit && tsc --noEmit",
+    "dev": "node scripts/dev.mjs",
+    "dev:clean": "node scripts/dev.mjs --hide-fixtures",
+    "start": "npm run build && SHOW_FIXTURE_CHROME=${SHOW_FIXTURE_CHROME:-0} next start -H 127.0.0.1 -p 3000",
+
     "db:start": "node scripts/local-db.mjs",
     "db:stop": "supabase stop",
     "db:migrate": "supabase migration up --local",
-    "test": "npm run build && node --test tests/*.test.mjs"
+    "test": "npm run build:domain && node --import tsx --test tests/*.test.mjs",
+    "portfolio:screenshots": "node scripts/capture-portfolio-screenshots.mjs",
+    "portfolio:videos": "node scripts/capture-portfolio-videos.mjs"
   },
-  "devDependencies": { "typescript": "~5.9.3" }
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "html-react-parser": "^6.1.9",
+    "next": "^15.5.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
 }

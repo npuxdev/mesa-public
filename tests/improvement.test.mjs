@@ -2,12 +2,12 @@
 // Added now; execution and broader acceptance remain deferred by the user.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FixtureAdapter,scopeProjection} from '../dist/platform.js';
-import {createFixtureData} from '../dist/fixtures.js';
-import {workflows} from '../dist/workflow-model.js';
-import {analyticsSelection,coverage,analyticsCsv,comparison,improvement,verificationState,opportunityRows} from '../dist/improvement-model.js';
-import {analytics,actions} from '../dist/improvement-views.js';
-import {screens,defaultIds} from '../dist/routes.js';
+import {FixtureAdapter,scopeProjection} from '../src/platform.ts';
+import {createFixtureData} from '../src/fixtures.ts';
+import {workflows} from '../src/workflow-model.ts';
+import {analyticsSelection,coverage,analyticsCsv,comparison,improvement,verificationState,opportunityRows} from '../src/improvement-model.ts';
+import {analytics,actions} from '../src/improvement-views.ts';
+import {screens,defaultIds} from '../src/routes.ts';
 const scope={tenant:'atlas',persona:'manager',state:'ready',epoch:1};
 const setup=async()=>{const a=new FixtureAdapter();await a.read(scope);return {a,read:async()=>(await a.read(scope)).data.view,send:(type,resourceId,payload={},expectedVersion)=>a.command(scope,{type,resourceId,payload,expectedVersion,idempotencyKey:crypto.randomUUID()})};};
 test('filters intersect at opportunity grain and CSV follows the same selection',()=>{const d=createFixtureData('atlas'),q=new URLSearchParams({discipline:'Incident response',role:'Incident commander',team:'Program office',period:'30'}),m=analyticsSelection(d,q);assert.deepEqual(m.sessions.map(s=>s.id),['s-ir-01']);assert.equal(m.rows.length,1);assert.equal(coverage(m.rows).eligible,1);const csv=analyticsCsv(d,q);assert.ok(csv.includes('s-ir-01'));assert.ok(!csv.includes('s-bc-01'));assert.equal(csv.split('\r\n').length,3);});

@@ -1,0 +1,60 @@
+{
+  "$schema": "portfolio-export-flow/v1",
+  "id": "02-evidence-gate",
+  "title": "A missing observation is not a score",
+  "description": "Findings review queue, then the draft finding with no evidence. Does not click Approve and does not call the model.",
+  "outputVideo": "videos/02-evidence-gate.webm",
+  "maxDurationSec": 30,
+  "targetDurationSec": 24,
+  "recording": {
+    "viewport": { "width": 1920, "height": 1080 },
+    "deviceScaleFactor": 1,
+    "theme": null,
+    "baseUrl": "${SCREENSHOT_BASE_URL}",
+    "showCursor": true,
+    "slowMo": 90
+  },
+  "initialState": {
+    "clearStorage": true,
+    "localStorage": {},
+    "sessionStorage": {}
+  },
+  "mocks": [],
+  "steps": [
+    {
+      "id": "load-queue",
+      "action": "navigate",
+      "url": "/o/atlas/sessions/s-ir-01/review/findings",
+      "comment": "REV-02. Several Review links exist, so the next step uses the finding route.",
+      "then": { "waitFor": { "text": "Findings Review" }, "waitMs": 2000 }
+    },
+    {
+      "id": "show-row",
+      "action": "scroll",
+      "locator": { "strategy": "text", "text": "Executive escalation was not observed", "exact": false },
+      "intoView": true,
+      "then": { "waitMs": 1800 }
+    },
+    {
+      "id": "open-finding",
+      "action": "navigate",
+      "url": "/o/atlas/findings/f-03",
+      "then": { "waitFor": { "text": "No qualifying evidence" }, "waitMs": 1600 }
+    },
+    {
+      "id": "hold-end",
+      "action": "wait",
+      "ms": 2800,
+      "comment": "Hold on the N/O warning. Do not activate Approve inspected finding."
+    }
+  ],
+  "endAssertions": [
+    { "waitFor": { "text": "No qualifying evidence" } },
+    { "waitFor": { "text": "N/O and N/A remain distinct from numeric zero." } }
+  ],
+  "narrativeBeats": [
+    { "atStep": "load-queue", "beat": "Hook — review is a queue of observations" },
+    { "atStep": "show-row", "beat": "The not-observed row is visible before opening it" },
+    { "atStep": "hold-end", "beat": "Proof — missing evidence stays non-numeric" }
+  ]
+}

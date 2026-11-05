@@ -1,0 +1,9 @@
+flowchart TD
+  A["Author edits a draft scenario"] --> B["Command with expectedVersion"]
+  B --> C{"Scope allows author and state is ready"}
+  C -->|no| R["Receipt rejected"]
+  C -->|yes| D["workflowCommand mutates draft and bumps version"]
+  D --> E["Compare-and-swap commit on strata_workspaces"]
+  E --> F["Receipt executed with original command id"]
+  F --> G["Next read is scopeProjection for the persona"]
+  G --> H["Participant view omits facilitator notes and unreleased injects"]

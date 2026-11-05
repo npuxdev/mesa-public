@@ -1,0 +1,1 @@
+Local prototype that turns a complex rehearsal into a versioned scenario, a facilitated session, and a publication that stays until evidence is reviewed.

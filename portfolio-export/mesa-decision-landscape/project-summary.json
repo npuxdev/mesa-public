@@ -1,0 +1,71 @@
+{
+  "title": "MESA — Decision Landscape",
+  "shortTitle": "MESA",
+  "role": [
+    "Product design",
+    "Frontend engineering",
+    "Full-stack engineering of the local harness"
+  ],
+  "domain": [
+    "Operational readiness exercises",
+    "Governed workflow software"
+  ],
+  "stack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "Node.js",
+    "Supabase",
+    "PostgreSQL",
+    "OpenAI Responses API"
+  ],
+  "status": "Local development prototype (private, v0.2.0). Not production.",
+  "year": "2026",
+  "summary": "I built a local workspace that takes a complex operational rehearsal from a versioned scenario graph through a facilitated session to a publication that stays immutable until evidence is inspected. Generated text is a proposal, not an approval.",
+  "problem": "Rehearsals, findings, and after-action reports usually split across documents. Scores appear where nobody looked, and published conclusions get edited in place.",
+  "solution": "One versioned definition feeds a pinned exercise. Commands return receipts. Findings need inspected citations. Reports publish an exact digest. AI output is accepted or rejected against that digest.",
+  "highlights": [
+    "70-screen route registry with legacy URL aliases",
+    "Scenario graph projected from the definition, not a second model",
+    "Command lifecycle where accepted is not executed",
+    "Not-observed stays non-numeric and cannot be approved as a score",
+    "Scope projection strips facilitator-only content from participant views",
+    "Reviewed AI proposals with version and digest checks",
+    "MESA design tokens, accessible verification icons, and explicit empty states"
+  ],
+  "limitations": [
+    "Local harness only. Persona switching is not authentication.",
+    "Workflow state is one JSON document per organization.",
+    "React hosts the shell; most screens are still HTML strings.",
+    "Publication digests are a non-cryptographic hash, not signatures.",
+    "No public demo, no production deploy, no measured users.",
+    "Historical test notes disagree (36, 69, 70). Re-run before citing a count.",
+    "GLASSHOUSE facilitator content is compiled into the client bundle."
+  ],
+  "nextSteps": [
+    "Capture the two portfolio videos with fixture chrome hidden",
+    "Confirm public clearance for MESA, STRATA, and GLASSHOUSE",
+    "Replace unused duplicate view renderers as React screens land",
+    "Move facilitator-only content server-side before any non-local use",
+    "Replace the FNV digest before claiming external trust"
+  ],
+  "media": {
+    "heroScreenshot": "screenshots/02-scenario-graph.png",
+    "videos": [
+      {
+        "file": "videos/01-scenario-graph-loop.webm",
+        "title": "From program overview to the scenario graph",
+        "durationSec": 26,
+        "resolution": "1920x1080",
+        "purpose": "Primary hero loop — pattern in motion"
+      },
+      {
+        "file": "videos/02-evidence-gate.webm",
+        "title": "A missing observation is not a score",
+        "durationSec": 24,
+        "resolution": "1920x1080",
+        "purpose": "Differentiated proof — evidence gate before approval"
+      }
+    ]
+  }
+}

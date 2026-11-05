@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FixtureAdapter,scopeProjection} from '../dist/platform.js';
-import {createFixtureData} from '../dist/fixtures.js';
-import {workflows,authorDigest,reportDigest,permittedReport} from '../dist/workflow-model.js';
-import {exportPackage,parsePackage} from '../dist/workflow-package.js';
-import {reportDocx,reportText,calendarEvent} from '../dist/workflow-exports.js';
-import {select} from '../dist/workflow-ui.js';
+import {FixtureAdapter,scopeProjection} from '../src/platform.ts';
+import {createFixtureData} from '../src/fixtures.ts';
+import {workflows,authorDigest,reportDigest,permittedReport} from '../src/workflow-model.ts';
+import {exportPackage,parsePackage} from '../src/workflow-package.ts';
+import {reportDocx,reportText,calendarEvent} from '../src/workflow-exports.ts';
+import {select} from '../src/workflow-ui.ts';
 const scope={tenant:'atlas',persona:'manager',state:'ready',epoch:1};
 const setup=async()=>{const a=new FixtureAdapter();await a.read(scope);return {a,read:async()=>(await a.read(scope)).data.view,send:(type,resourceId,payload={},expectedVersion)=>a.command(scope,{type,resourceId,payload,expectedVersion,idempotencyKey:crypto.randomUUID()})};};
 const rejects=(p,code)=>assert.rejects(p,e=>e.code===code);

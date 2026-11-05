@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {inferProposal,validateProposal} from '../backend/inference.mjs';
 import {protectRequest,validateScope,acceptanceCommand} from '../backend/api.mjs';
-import {FixtureAdapter} from '../dist/platform.js';
-import {authorDigest} from '../dist/workflow-model.js';
+import {FixtureAdapter} from '../src/platform.ts';
+import {authorDigest} from '../src/workflow-model.ts';
 
 const output={title:'Revised Title',summary:'Reviewed description',body:'Inject narrative',notes:'Facilitator only',rationale:'Explicit authority cue',warnings:[]};
 test('AI acceptance edits only reviewed narrative and invalidates validation; stale or published bases fail',async()=>{
@@ -33,9 +33,9 @@ test('Refusal, incomplete, malformed output and upstream failures never become p
   assert.throws(()=>validateProposal({...output,execute:'publish'}));assert.throws(()=>validateProposal({...output,warnings:[7]}));
 });
 test('Local endpoints reject rebinding and cross-origin requests',()=>{
-  const req={headers:{host:'127.0.0.1:4173',origin:'http://127.0.0.1:4173'},socket:{localPort:4173}};
+  const req={headers:{host:'127.0.0.1:3000',origin:'http://127.0.0.1:3000'}};
   protectRequest(req);
-  assert.throws(()=>protectRequest({...req,headers:{...req.headers,host:'attacker.example:4173'}}));
+  assert.throws(()=>protectRequest({...req,headers:{...req.headers,host:'attacker.example:3000'}}));
   assert.throws(()=>protectRequest({...req,headers:{...req.headers,origin:'https://attacker.example'}}));
   assert.throws(()=>protectRequest({...req,headers:{...req.headers,'sec-fetch-site':'cross-site'}}));
   assert.throws(()=>validateScope({tenant:'other',persona:'manager',state:'ready',epoch:0}));

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FixtureAdapter, canScreen, scopeProjection, isOverdue, canApproveFinding} from '../dist/platform.js';
-import {createFixtureData} from '../dist/fixtures.js';
-import {screens, routeTo, matchRoute} from '../dist/routes.js';
-import {assertMetric} from '../dist/contracts.js';
+import {FixtureAdapter, canScreen, scopeProjection, isOverdue, canApproveFinding} from '../src/platform.ts';
+import {createFixtureData} from '../src/fixtures.ts';
+import {screens, routeTo, matchRoute} from '../src/routes.ts';
+import {assertMetric} from '../src/contracts.ts';
 
 const scope=(overrides={})=>({tenant:'atlas',persona:'manager',state:'ready',epoch:1,...overrides});
 const mutation=(type,resourceId,payload={},extra={})=>({type,resourceId,payload,idempotencyKey:crypto.randomUUID(),...extra});

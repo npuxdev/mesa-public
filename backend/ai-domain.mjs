@@ -61,6 +61,22 @@ export function validatePolicy(data,id,policy){
  if(!Array.isArray(policy.transitions)||policy.transitions.some(id=>!x.pinned.definition.transitions.some(t=>t.id===id)))throw new ServiceError('TRANSITION','Choose pinned registered transitions.');
  return {actorId:policy.actorId,maxTurns:policy.maxTurns,maxTokens:policy.maxTokens,intervalSeconds:policy.intervalSeconds,stepMinutes:policy.stepMinutes,audiences:[...new Set(policy.audiences)],transitions:[...new Set(policy.transitions)],releaseInjects:policy.releaseInjects===true,adjudicate:policy.adjudicate===true,disclosed:true};
 }
+const bounded=(value,min,max,fallback,label)=>{
+ if(value===undefined||value==='')return fallback;
+ const n=Number(value);
+ if(!Number.isInteger(n)||n<min||n>max)throw new ServiceError('LIMIT',`${label} must be ${min}–${max}.`);
+ return n;
+};
+export function simulationPolicy(data,id,policy={}){
+ const {s,x}=sessionContext(data,id);
+ if(!x.aiSimulation)throw new ServiceError('SESSION','This session is not an AI cast simulation.',409);
+ if(s.status!=='running'&&s.status!=='paused')throw new ServiceError('PAUSED','Resume or keep the simulation running before the cast acts.',409);
+ if(policy.disclosed!==true&&policy.disclosed!=='yes')throw new ServiceError('DISCLOSURE','Confirm AI cast disclosure before the actors start.');
+ const def=x.pinned.definition,cast=def.entities.filter(e=>['human_role','threat_actor','environment_actor'].includes(e.kind)).map(e=>e.id);
+ if(!cast.length)throw new ServiceError('ACTOR','The pinned scenario has no actors.');
+ const audiences=def.entities.filter(e=>e.kind==='human_role').map(e=>e.id);
+ return {simulation:true,actorId:cast[0],cast,cursor:0,maxTurns:bounded(policy.maxTurns,1,30,12,'Turns'),maxTokens:bounded(policy.maxTokens,10000,300000,180000,'Token reservation'),intervalSeconds:bounded(policy.intervalSeconds,4,60,8,'Seconds between actors'),stepMinutes:bounded(policy.stepMinutes,0,10,0,'Simulation minutes per turn'),audiences,transitions:def.transitions.map(t=>t.id),releaseInjects:true,adjudicate:false,disclosed:true};
+}
 export function turnContext(data,id,policy){
  const {s,x}=sessionContext(data,id),def=x.pinned.definition,actor=def.entities.find(e=>e.id===policy.actorId);
  const permitted=def.transitions.filter(t=>policy.transitions.includes(t.id));
@@ -101,21 +117,28 @@ export function reportContext(data,id){
 export async function applyTurn(engine,scope,id,policy,content,jobId){
  validateShape(content,schemas.turn);const state=engine.snapshot(scope.tenant),data=state.data,{s,x}=sessionContext(data,id),def=x.pinned.definition;
  if(s.status!=='running')throw new ServiceError('PAUSED','Exercise no longer running.');
+ const actor=def.entities.find(e=>e.id===policy.actorId),who=`AI · ${actor?.name||policy.actorId}`;
  const execute=(transitionId,actorOnly)=>{
   const t=def.transitions.find(t=>t.id===transitionId&&policy.transitions.includes(t.id));
   if(!t||actorOnly&&t.roleId!==policy.actorId||x.world[t.targetId]!==t.from)throw new ServiceError('PREREQUISITE','AI transition is outside its envelope or precondition is unmet.');
   const budget=Number(x.world[`${t.targetId}:budget`]??def.entities.find(e=>e.id===t.targetId)?.resources??0);
   if(budget<t.cost)throw new ServiceError('RESOURCES','AI action exceeds the resource budget.');
   x.world[`${t.targetId}:budget`]=String(budget-t.cost);x.world[t.targetId]=t.to;
-  appendEvent(data,id,`AI simulated action: ${t.name}`,`${t.from} → ${t.to}. AI task ${jobId}; NOT a participant action.`,t.id,policy.audiences);
+  appendEvent(data,id,`${who} · ${t.name}`,`${t.from} → ${t.to}. ${who} took this registered action. AI task ${jobId}; NOT a participant action.`,t.id,policy.audiences);
  };
- if(content.transitionId)execute(content.transitionId,true);
- if(content.message){
-  if(content.message.length>2000||!content.audiences.length||content.audiences.some(a=>!policy.audiences.includes(a)))throw new ServiceError('AUDIENCE','AI message exceeded permitted delivery bounds.');
-  const ev=appendEvent(data,id,'AI synthetic actor message',content.message,'ai-message',content.audiences);
-  x.messages.push({id:uid('ai-msg'),thread:'internal',source:`AI synthetic actor ${policy.actorId}`,text:content.message,minute:minutes(s.simulationTime),attachment:'',status:'delivered',audiences:content.audiences});
-  data.evidence.push({id:ev.id,sessionId:id,audiences:content.audiences,title:'AI synthetic actor artifact',type:'document',time:s.simulationTime,version:'1',source:`AI simulation artifact ${jobId}; not participant observation`,content:content.message,downloadable:true});
+ if(content.transitionId){
+  try{execute(content.transitionId,true);}
+  catch(error){if(!policy.simulation)throw error;appendEvent(data,id,`${who} · action not applied`,error.message||'The registered action was not available.','ai-rejected',policy.audiences);}
  }
+ if(content.message){
+  let audiences=content.audiences;
+  if(policy.simulation){audiences=(Array.isArray(audiences)?audiences:[]).filter(a=>policy.audiences.includes(a));if(!audiences.length)audiences=policy.audiences.slice(0,1);}
+  if(content.message.length>2000||!audiences.length||audiences.some(a=>!policy.audiences.includes(a)))throw new ServiceError('AUDIENCE','AI message exceeded permitted delivery bounds.');
+  const ev=appendEvent(data,id,`${who} · message`,content.message,'ai-message',audiences);
+  x.messages.push({id:uid('ai-msg'),thread:'internal',source:who,text:content.message,minute:minutes(s.simulationTime),attachment:'',status:'delivered',audiences});
+  data.evidence.push({id:ev.id,sessionId:id,audiences,title:'AI synthetic actor artifact',type:'document',time:s.simulationTime,version:'1',source:`AI simulation artifact ${jobId}; not participant observation`,content:content.message,downloadable:true});
+ }
+ if(policy.simulation&&!content.transitionId&&!content.message)appendEvent(data,id,`${who} · waited`,'No registered action was taken this turn.','ai-wait',policy.audiences);
  if(content.resolution!=='none'){
   const r=x.requests.find(r=>r.id===content.requestId&&r.state==='pending');
   if(!policy.adjudicate||!r||!content.rationale.trim())throw new ServiceError('REQUEST','AI adjudication requires an enabled policy and pending request.');
@@ -131,7 +154,7 @@ export async function applyTurn(engine,scope,id,policy,content,jobId){
  }
  if(policy.releaseInjects){
   const current=engine.snapshot(scope.tenant).data,{s:now,x:runtime}=sessionContext(current,id);
-  for(const i of runtime.injects.filter(i=>i.state==='queued'&&(i.definition.trigger==='time'&&i.minute<=minutes(now.simulationTime)||i.definition.trigger==='condition'&&runtime.events.some(e=>e.kind===i.definition.condition))))await engine.command(scope,{type:'inject.release',resourceId:id,idempotencyKey:`${jobId}:release:${i.definition.id}`,payload:{inject:i.definition.id}});
+  for(const i of runtime.injects.filter(i=>i.state==='queued'&&(i.definition.trigger==='time'&&i.minute<=minutes(now.simulationTime)||i.definition.trigger==='condition'&&runtime.events.some(e=>e.kind===i.definition.condition)||policy.simulation&&i.definition.trigger==='manual'&&i.minute<=minutes(now.simulationTime))))await engine.command(scope,{type:'inject.release',resourceId:id,idempotencyKey:`${jobId}:release:${i.definition.id}`,payload:{inject:i.definition.id}});
  }
  return {sessionId:id,description:'Bounded AI turn committed. AI artifacts are not participant observations.'};
 }

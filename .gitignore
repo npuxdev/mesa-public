@@ -2,5 +2,9 @@
 .env.*
 !.env.example
 node_modules/
+dist/
+web-dist/
+.next/
 supabase/.temp/
 supabase/.branches/
+portfolio-export/mesa-decision-landscape/videos/.tmp-*/

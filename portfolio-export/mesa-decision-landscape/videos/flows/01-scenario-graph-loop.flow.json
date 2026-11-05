@@ -1,0 +1,80 @@
+{
+  "$schema": "portfolio-export-flow/v1",
+  "id": "01-scenario-graph-loop",
+  "title": "Program overview to the scenario graph",
+  "description": "Atlas program overview, scenario library, organization scenarios, then the ransomware scenario graph fitted so the legend is readable.",
+  "outputVideo": "videos/01-scenario-graph-loop.webm",
+  "maxDurationSec": 30,
+  "targetDurationSec": 26,
+  "recording": {
+    "viewport": { "width": 1920, "height": 1080 },
+    "deviceScaleFactor": 1,
+    "theme": null,
+    "baseUrl": "${SCREENSHOT_BASE_URL}",
+    "showCursor": true,
+    "slowMo": 80
+  },
+  "initialState": {
+    "clearStorage": true,
+    "localStorage": {},
+    "sessionStorage": {}
+  },
+  "mocks": [],
+  "steps": [
+    {
+      "id": "load",
+      "action": "navigate",
+      "url": "/",
+      "comment": "HOME-01 Program Overview for the default Atlas manager.",
+      "then": { "waitFor": { "text": "Program Overview" }, "waitMs": 1800 }
+    },
+    {
+      "id": "open-scenarios",
+      "action": "click",
+      "locator": { "strategy": "role", "role": "link", "name": "Scenarios", "exact": true },
+      "comment": "Primary nav. Accessible name is the sidebar label, not title-cased.",
+      "then": { "waitFor": { "text": "Scenario Library" }, "waitMs": 1400 }
+    },
+    {
+      "id": "organization-list",
+      "action": "click",
+      "locator": { "strategy": "role", "role": "link", "name": "Organization scenarios", "exact": true },
+      "then": { "waitFor": { "text": "Organization Scenarios" }, "waitMs": 1200 }
+    },
+    {
+      "id": "open-definition",
+      "action": "click",
+      "locator": { "strategy": "role", "role": "link", "name": "Ransomware with data exposure", "exact": true },
+      "then": { "waitFor": { "text": "Brief & Bindings" }, "waitMs": 1000 }
+    },
+    {
+      "id": "open-graph",
+      "action": "click",
+      "locator": { "strategy": "role", "role": "link", "name": "Graph, Injects & Artifacts", "exact": true },
+      "comment": "Section rail text is title-cased by applyTitleCase.",
+      "then": { "waitFor": { "text": "Scenario Graph" }, "waitMs": 1400 }
+    },
+    {
+      "id": "fit",
+      "action": "click",
+      "locator": { "strategy": "role", "role": "button", "name": "Fit graph", "exact": true },
+      "then": { "waitMs": 1200 }
+    },
+    {
+      "id": "hold-end",
+      "action": "scroll",
+      "locator": { "strategy": "text", "text": "Solid arrow: recorded transition condition", "exact": false },
+      "intoView": true,
+      "then": { "waitMs": 2200 }
+    }
+  ],
+  "endAssertions": [
+    { "waitFor": { "text": "Solid arrow: recorded transition condition" } },
+    { "waitFor": { "text": "Dashed line: overview grouping, not execution order" } }
+  ],
+  "narrativeBeats": [
+    { "atStep": "load", "beat": "Hook — a program overview, not a blank canvas" },
+    { "atStep": "open-graph", "beat": "Core interaction — the definition drawn as a graph" },
+    { "atStep": "hold-end", "beat": "Proof — legend distinguishes conditions from grouping" }
+  ]
+}

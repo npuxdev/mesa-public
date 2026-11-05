@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FixtureAdapter} from '../dist/platform.js';
-import {createFixtureData} from '../dist/fixtures.js';
-import {glasshousePackage,installGlasshouse} from '../dist/glasshouse.js';
-import {parsePackage} from '../dist/workflow-package.js';
-import {workflows,validation} from '../dist/workflow-model.js';
+import {FixtureAdapter} from '../src/platform.ts';
+import {createFixtureData} from '../src/fixtures.ts';
+import {glasshousePackage,installGlasshouse} from '../src/glasshouse.ts';
+import {parsePackage} from '../src/workflow-package.ts';
+import {workflows,validation} from '../src/workflow-model.ts';
 
 const scope={tenant:'harbor',persona:'manager',state:'ready',epoch:1};
 const setup=async()=>{const a=new FixtureAdapter();const read=async(persona='manager')=>(await a.read({...scope,persona})).data.view;const send=async(type,payload={},persona='manager')=>{await read(persona);return a.command({...scope,persona},{type,resourceId:'s-glasshouse-01',payload,idempotencyKey:crypto.randomUUID()});};await read();return {a,read,send};};

@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {ServiceError} from './repository.mjs';
 import {inferStructured} from './inference.mjs';
-import {schemas,validateShape,scenarioPackage,expandedPackage,authorContext,sessionContext,validatePolicy,turnContext,assessmentContext,applyAssessment,reportContext,applyTurn} from './ai-domain.mjs';
+import {schemas,validateShape,scenarioPackage,expandedPackage,authorContext,sessionContext,validatePolicy,simulationPolicy,turnContext,assessmentContext,applyAssessment,reportContext,applyTurn} from './ai-domain.mjs';
 import {workflows,snapshot,authorDigest,minutes} from '../dist/workflow-model.js';
 import {can} from '../dist/platform.js';
 
@@ -41,7 +41,8 @@ export async function performTask(repo,scope,input,{run=null,lease=null,infer=in
  let generated;
  try{
   await repo.rest('strata_ai_tasks',{method:'POST',body:job});
-  generated=await infer('strata_'+operation,schemas[operation],instructions[operation],payload,{signal:controller.signal,maxOutput});
+  const instruction=instructions[operation]+(operation==='turn'&&run?.policy?.simulation?' Play only the named actor in this observed rehearsal. Take a registered action when its precondition and budget allow, and describe that action so an observer can follow it. You are not a human participant and nothing you do is a score.':'');
+  generated=await infer('strata_'+operation,schemas[operation],instruction,payload,{signal:controller.signal,maxOutput});
   validateShape(generated.content,schemas[operation]);
   if(controller.signal.aborted)throw new ServiceError('AI_STOPPED','Automation was stopped; response was not applied.');
   const content=generated.content;let result;
@@ -72,7 +73,7 @@ export async function performTask(repo,scope,input,{run=null,lease=null,infer=in
  }finally{busy.delete(scope.tenant);if(run)controllers.delete(run.id);}
 }
 export async function handleExpandedAi(repo,scope,input,path){
- if(!path.startsWith('/api/ai/task')&&!path.startsWith('/api/ai/run'))return undefined;
+ if(!path.startsWith('/api/ai/task')&&!path.startsWith('/api/ai/run')&&!path.startsWith('/api/ai/simulation'))return undefined;
  if(scope.state!=='ready'||!can(scope,'facilitate'))throw new ServiceError('FORBIDDEN','AI operations require a current facilitator/author scope.',403);
  if(path==='/api/ai/tasks')return (await repo.rest(`strata_ai_tasks?tenant=eq.${scope.tenant}&actor=eq.${scope.persona}&order=created_at.desc&limit=30`)).map(taskPublic);
  if(path==='/api/ai/task'){
@@ -94,6 +95,35 @@ export async function handleExpandedAi(repo,scope,input,path){
  }
  if(path==='/api/ai/run/stop-session'){
   await suspendSessionAi(repo,scope.tenant,safeResource(input.resource),'stopped');return {status:'stopped'};
+ }
+ if(path==='/api/ai/simulation/start'){
+  if(!process.env.OPENAI_API_KEY)throw new ServiceError('AI_UNCONFIGURED','Configure the server API key before running a simulated scenario.');
+  const id=uuid(input.id),kind=input.kind==='cast'?'cast':'launch',resource=safeResource(input.resource);
+  const disclosed=input.disclosed===true||input.disclosed==='yes'||input.policy?.disclosed===true;
+  if(!disclosed)throw new ServiceError('DISCLOSURE','Confirm that every role is played by an AI actor before starting.');
+  const {row,engine}=await repo.workspace(scope.tenant);
+  await engine.read(scope);
+  let sessionId=resource;
+  if(kind==='launch'){
+   sessionId=`sim-${id.replace(/[^a-zA-Z0-9]/g,'').slice(0,12)}`;
+   await engine.command(scope,{type:'simulation.launch',resourceId:resource,idempotencyKey:id,payload:{disclosed:'yes'}});
+   await repo.commit(scope.tenant,row.version,engine);
+  }else if(engine.snapshot(scope.tenant).data.sessions.find(s=>s.id===sessionId)?.status==='paused'){
+   await engine.command(scope,{type:'session.resume',resourceId:sessionId,idempotencyKey:`${id}:resume`,payload:{}});
+   await repo.commit(scope.tenant,row.version,engine);
+  }
+  const snapshot=engine.snapshot(scope.tenant).data;
+  const session=snapshot.sessions.find(s=>s.id===sessionId);
+  if(!session)throw new ServiceError('SESSION','Simulation session was not created.',404);
+  const policy=simulationPolicy(snapshot,sessionId,{...(input.policy||{}),disclosed:true});
+  const active=(await repo.rest(`strata_ai_runs?tenant=eq.${scope.tenant}&session_id=eq.${encodeURIComponent(sessionId)}&status=eq.running&limit=1`))[0];
+  if(active)return {sessionId,exerciseId:session.exerciseId,run:active};
+  const runId=kind==='launch'?id:uuid(input.runId||id);
+  const previous=(await repo.rest(`strata_ai_runs?id=eq.${runId}&tenant=eq.${scope.tenant}`))[0];
+  if(previous){if(previous.actor!==scope.persona||previous.session_id!==sessionId)throw new ServiceError('IDEMPOTENCY','Run ID belongs to a different simulation.',409);return {sessionId,exerciseId:session.exerciseId,run:previous};}
+  const run={id:runId,tenant:scope.tenant,session_id:sessionId,actor:scope.persona,status:'running',policy};
+  await repo.rest('strata_ai_runs',{method:'POST',body:run});
+  return {sessionId,exerciseId:session.exerciseId,run};
  }
  throw new ServiceError('NOT_FOUND','AI endpoint unavailable.',404);
 }
@@ -118,7 +148,18 @@ export function startAiRunner(database){
     try{
      const {engine}=await repo.workspace(run.tenant),{s,x}=sessionContext(engine.snapshot(run.tenant).data,run.session_id);
      if(s.status!=='running'||minutes(s.simulationTime)>=x.pinned.definition.termination)throw new ServiceError('PAUSED','Exercise paused, ended, or reached termination. Explicitly enable again after review.');
-     await performTask(repo,{tenant:run.tenant,persona:run.actor,state:'ready',epoch:0},{id:randomUUID(),operation:'turn',resource:run.session_id,request:'Bounded automatic actor turn'},{run,lease:randomUUID()});
+     if(run.policy?.simulation){
+      const cast=Array.isArray(run.policy.cast)?run.policy.cast:[];
+      if(!cast.length)throw new ServiceError('ACTOR','Simulation cast is empty.');
+      const cursor=Number(run.policy.cursor)||0;
+      run.policy={...run.policy,cursor,actorId:cast[cursor%cast.length]};
+     }
+     const request=run.policy?.simulation?`Observed simulation turn for ${run.policy.actorId}. Choose one action you own, or wait, and say what you do.`:'Bounded automatic actor turn';
+     await performTask(repo,{tenant:run.tenant,persona:run.actor,state:'ready',epoch:0},{id:randomUUID(),operation:'turn',resource:run.session_id,request},{run,lease:randomUUID()});
+     if(run.policy?.simulation&&run.policy.cast?.length){
+      const cursor=((Number(run.policy.cursor)||0)+1)%run.policy.cast.length;
+      await repo.rest(`strata_ai_runs?id=eq.${run.id}&status=eq.running`,{method:'PATCH',body:{policy:{...run.policy,cursor,actorId:run.policy.cast[cursor]}}});
+     }
      if(run.turns+1>=run.policy.maxTurns)await repo.rest(`strata_ai_runs?id=eq.${run.id}&status=eq.running`,{method:'PATCH',body:{status:'complete',reason:'Turn limit reached.'}});
     }catch(error){await repo.rest(`strata_ai_runs?id=eq.${run.id}&status=eq.running`,{method:'PATCH',body:{status:'paused',lease:null,reason:error.code?error.message:'Turn failed; no automatic retry.'}});}
    }

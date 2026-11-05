@@ -1,0 +1,20 @@
+flowchart LR
+  subgraph browser [Browser]
+    Host["web/App.tsx"]
+    Session["session-controller.ts"]
+    Views["views and workflow views"]
+    Host --> Session --> Views
+  end
+  subgraph api [Node API loopback]
+    HTTP["backend/api.mjs"]
+    Repo["repository.mjs"]
+    Engine["workflow-commands.ts"]
+    HTTP --> Repo --> Engine
+  end
+  subgraph data [Local data]
+    PG["Supabase Postgres JSON aggregate"]
+    AI["OpenAI Responses"]
+  end
+  Views -->|"/api/read and /api/command"| HTTP
+  HTTP --> AI
+  Repo --> PG
