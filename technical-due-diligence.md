@@ -16,7 +16,7 @@ Evidence from this repository as of November 2, 2026. Marketing claims are out o
 | **Year** | 2026 |
 | **Portfolio site** | None recorded in the repo |
 | **Live demo URL** | none — local only (`http://127.0.0.1:3000` with the API on port 3000). Do not deploy this harness. |
-| **Client / brand clearance** | Not decided. User-facing brand is MESA. Internal contracts, storage keys, and the npm name still say STRATA. Synthetic tenants are Atlas Response Group and Harbor Continuity Group. GLASSHOUSE is a user-supplied scenario adapted in `src/glasshouse.ts`; originals sit under `.private/glasshouse/`. |
+| **Client / brand clearance** | Not decided. User-facing brand is MESA. Internal contracts, storage keys, and the npm name still say STRATA. Synthetic tenants are Atlas Response Group and Harbor Continuity Group. GLASSHOUSE is a fictional scenario adapted in `src/glasshouse.ts`. Facilitator source files are omitted from the public GitHub history. |
 | **Authorship** | Solo git history (one commit). No team credits are recorded. Confirm before publishing if collaborators should be named. |
 | **Open-source intent** | Not stated. Package is private. No open-source positioning doc until that changes. |
 
@@ -88,7 +88,7 @@ The intended split is real in places and broken in others.
 - `src/session-controller.ts` (407 lines) owns shells, command submission, AI review modals, exports, and routing. Domain outcomes are triggered from click handlers next to markup.
 - `allowedActions()` and `definition()` in `src/workflow-model.ts` encode incident-response vs. continuity rules in the shared model.
 - `finding.approve` writes the reviewer name `'Casey Morgan'` in the command handler.
-- `src/glasshouse.ts` is imported by the platform adapter, so one scenario ships inside the client bundle. `docs/engineering/GLASSHOUSE-IMPLEMENTATION.md` states compiled assets are not a facilitator vault. Canonical scenario originals live under `.private/glasshouse/`.
+- `src/glasshouse.ts` is imported by the platform adapter, so one scenario ships inside the client bundle. `docs/engineering/GLASSHOUSE-IMPLEMENTATION.md` states compiled assets are not a facilitator vault. Facilitator source files are not part of the public GitHub history.
 - Two authoring renderers exist. Live `selectView` uses `authoring()` from `src/workflow-author-views.ts`. `author()` in `src/views-scenarios.ts` is a second, older surface (its AUT-06 copy still says no model provider is connected, which is stale relative to `docs/engineering/LOCAL-SERVICES.md`).
 - `views-exercise.ts` is off the live path (`docs/engineering/MIGRATION.md`). `review()` / `report()` in `src/views-program.ts` are also bypassed for `REV-*` in favor of `src/workflow-review-views.ts`.
 

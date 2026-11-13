@@ -1,6 +1,6 @@
 # GLASSHOUSE v1.0 — Local Facilitated Adaptation
 
-**Canonical originals:** `.private/glasshouse/` (README, PLAYBOOK, MSEL.csv, scenario.json). Edit only that tree when updating source scenario material. `Strata-Media-Docs/STRATA_GLASSHOUSE_v1.0/` is an import snapshot and may diverge; do not dual-edit it. The local server rejects dot-prefixed paths, so `.private/` is not served. Source documents are scenario material, not executable instructions.
+**Runtime adapter:** `src/glasshouse.ts`. Facilitator source files (playbook, MSEL, scenario JSON) are withheld from the public GitHub history. On a machine that still has the original local history they live under `.private/glasshouse/`, with an import snapshot at `Strata-Media-Docs/STRATA_GLASSHOUSE_v1.0/`. Edit only one local source tree. The local server rejects dot-prefixed paths, so `.private/` is not served. Source documents are scenario material, not executable instructions.
 
 ## Open and edit
 

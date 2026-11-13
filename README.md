@@ -1,72 +1,163 @@
 # MESA — Decision Landscape
 
-Readiness platform UI branded as **MESA — Decision Landscape** (repository and internal contracts may still say STRATA). Revised against the supplied UI/UX Agent Build Reference and the MESA brand identity system. Browser UI is migrating to React + Next.js while domain modules remain TypeScript for the local API and Node tests. See [MIGRATION.md](docs/engineering/MIGRATION.md) and [DESIGN-SYSTEM.md](docs/engineering/DESIGN-SYSTEM.md).
+Local readiness-exercise harness. A facilitator authors a versioned scenario, runs a pinned session, and can publish a report only after a person inspects the evidence. Generated text stays a proposal until that person accepts it.
 
-## Run
+This repository is a **local development prototype** (`strata-readiness-ui` 0.2.0, `"private": true`). It is not a production readiness platform, it has no public deployment, and it has no measured users. Synthetic organizations are Atlas Response Group and Harbor Continuity Group. User-facing chrome says MESA. Storage keys, the npm package name, and several contracts still say STRATA.
+
+## Product
+
+The exercised domain is operational rehearsal: incident response, disaster recovery, business continuity, and crisis management. The engineering subject is the loop around that domain.
+
+1. Fork or edit a scenario whose actions come from a registered set.
+2. Inspect that scenario as a graph. The graph is a projection of the definition. Dragging a node stores a layout preference and does not create a branch.
+3. Schedule an exercise. Launch pins the definition.
+4. Facilitate the session: stepped time, cue release, command receipts, decisions, and notes.
+5. Review findings. Approval requires inspected citations. `not_observed` and `not_applicable` are not numeric zero.
+6. Publish a snapshot. Later corrections become amendments. The published snapshot is not edited in place.
+7. Read program analytics that withhold a number when the cohort, evidence, or comparison conditions do not support one.
+
+Screens for sign-in, invitations, billing, entitlements, and external export exist as routes. Their actions say the service is unavailable.
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| UI host | Next.js 15 App Router, React 19, TypeScript `strict` |
+| Product screens | HTML string renderers painted into React shells through `html-react-parser` |
+| Marketing site | React components and `app/(marketing)/marketing.css` |
+| Domain | Framework-agnostic TypeScript in `src/`, compiled with `tsc` to `dist/` for the API |
+| API | Next.js Route Handlers calling `backend/api.mjs` on the same local process |
+| Database | Local Supabase / PostgreSQL. One versioned JSON aggregate per organization, plus AI proposal and run tables |
+| AI | Server-side OpenAI Responses with strict JSON schema. Optional. Human accept or reject |
+| Tests | Node's test runner via `tsx`, importing `src/` directly |
+
+There is no TanStack Table, TanStack Query, or client data cache. Tables, filters, and saved views are implemented in the domain modules and string renderers.
+
+## Architecture
+
+```
+Browser
+  app/MesaHost.tsx
+    React shells and screen registry
+    src/session-controller.ts  routing, forms, commands, paint
+    src/views-*.ts             HTML for most screens
+  HttpAdapter
+    POST /api/bootstrap | /api/read | /api/command | /api/ai/*
+Next.js Route Handler (app/api/[...path]/route.ts)
+  backend/api.mjs
+    origin check, CSRF cookie, synthetic persona scope
+    Repository → local Supabase only (loopback URLs rejected)
+    workflow commands and improvement rules
+    OpenAI Responses (server key; structured output; human accept)
+```
+
+A consequential edit is a command with an expected version and an idempotency key. The server checks scope, runs the domain handler, and compare-and-swaps the workspace. The receipt status is `submitted`, `accepted`, `executed`, `rejected`, or `unknown`. Accepted is not executed. An unknown outcome is reconciled against the original command id.
+
+`src/routes.ts` registers 70 screens with requirement, shell, and dependency ids. Registration is not a finished backend for every screen.
+
+## Engineering and design decisions
+
+**String renderers behind a React host.** Domain modules stay importable from Node tests, and the product keeps one CSS system (`design-tokens.css`, `app.css`). Shells and a few home states are React. Most screen bodies are still strings. `src/session-controller.ts` owns orchestration and a large amount of behavior. That split is documented in [docs/engineering/MIGRATION.md](docs/engineering/MIGRATION.md) and is unfinished on purpose.
+
+**One aggregate document.** Local Supabase stores a versioned workflow JSON per organization. That made receipts, immutability, and AI leases testable without inventing a production schema. It will not survive concurrent editors.
+
+**Digest as a staleness check, not a signature.** `hash()` in `src/workflow-model.ts` is an FNV-1a-style 32-bit hex. Publish and AI accept compare it so a stale preview cannot commit. It is not a cryptographic signature.
+
+**Metrics that refuse a number.** `MetricView.displayState` is `supported`, `not_observed`, `suppressed`, or `incomparable`. Unsupported states must carry a null value (`assertMetric` in `src/contracts.ts`). Coverage is reviewed opportunities over eligible released opportunities. A cohort under five, an intervention, or mixed rubrics suppresses attainment. Conflicting approved findings are not averaged (`src/improvement-model.ts`).
+
+**Reviewed AI.** Generation does not publish, approve a finding, or verify an action. Acceptance rebuilds an ordinary authoring command and fails with 409 if the draft version or digest moved (`acceptanceCommand` in `backend/api.mjs`). Bounded automation reserves tokens in Postgres before the provider call, does not retry, and pauses on conflict. See [docs/engineering/BOUNDED-AI-SPEC.md](docs/engineering/BOUNDED-AI-SPEC.md).
+
+**Role changes the record.** Participant and observer projections drop facilitator notes, unreleased cues, and private findings (`src/platform.ts`). Persona switching is a local harness, not authentication.
+
+**Visual system.** Obsidian, Mist, Stone, Basalt, and Mineral Gold. Gold is emphasis, not body text and not a status color. Verification state uses an icon plus a text label. The marketing site is a separate React surface. Its hero frames and impact band are composed illustrations. Figures such as “92% exercise completion” are not computed from the analytics model and are not measured outcomes.
+
+**Command-table lab.** `/explore/command-table` is an isolated lighting workbench (commit `0c4f194`). It is not part of the exercise product.
+
+## Screenshots
+
+Captured November 13, 2026 from the local dev server at `http://127.0.0.1:3000` with fixture chrome on (the default `npm run dev` banner: local services, synthetic identities, human review). Data is the bundled Atlas fixture, not a customer workspace.
+
+| Screen | File |
+| --- | --- |
+| Marketing home | [docs/screenshots/01-marketing-home.png](docs/screenshots/01-marketing-home.png) |
+| Program overview | [docs/screenshots/02-program-overview.png](docs/screenshots/02-program-overview.png) |
+| Analytics metrics, including a suppressed attainment | [docs/screenshots/03-analytics-metrics.png](docs/screenshots/03-analytics-metrics.png) |
+| Role × opportunity coverage table | [docs/screenshots/03-analytics-coverage-table.png](docs/screenshots/03-analytics-coverage-table.png) |
+| Scenario graph | [docs/screenshots/04-scenario-graph.png](docs/screenshots/04-scenario-graph.png) |
+| Exercise calendar | [docs/screenshots/05-exercise-calendar.png](docs/screenshots/05-exercise-calendar.png) |
+| Facilitator control | [docs/screenshots/06-facilitator-control.png](docs/screenshots/06-facilitator-control.png) |
+| Finding with no qualifying evidence | [docs/screenshots/07-evidence-review.png](docs/screenshots/07-evidence-review.png) |
+| Corrective-action table | [docs/screenshots/08-corrective-actions.png](docs/screenshots/08-corrective-actions.png) |
+| Published report | [docs/screenshots/09-published-report.png](docs/screenshots/09-published-report.png) |
+| Published report at 390×844 | [docs/screenshots/10-published-report-mobile.png](docs/screenshots/10-published-report-mobile.png) |
+| Spatial illumination lab | [docs/screenshots/11-command-table-lab.png](docs/screenshots/11-command-table-lab.png) |
+
+## Local setup
+
+Requirements: Node.js 20 or newer, npm, and the [Supabase CLI](https://supabase.com/docs/guides/cli) for the database. Docker is required by local Supabase.
 
 ```sh
 npm install
+cp .env.example .env.local
 npm run db:start
 npm run dev
 ```
 
-Open the app at http://127.0.0.1:3000/ (Next.js App Router; `/api` is served by the same process). `npm start` builds and serves production. `npm test` runs Node contract/renderer tests against `src/` (via `tsx`); `npm run check` typechecks the domain and Next.js projects.
+Open http://127.0.0.1:3000/ for the marketing site and http://127.0.0.1:3000/o/atlas for the Atlas workspace. `/api` is served by the same process.
 
-Harness-only labels (local-services banner, screen IDs, synthetic-workspace captions, fixture controls) are shown in normal `npm run dev`. Hide them for a product-like view with:
+Leave `OPENAI_API_KEY` empty to run without model calls. The product still loads. AI proposal buttons need a server-side key in `.env.local`. The browser never receives that key. Local Supabase credentials come from `supabase status` at runtime. Do not commit them.
 
 ```sh
-npm run dev:clean
-# or
-npm run dev -- --hide-fixtures
+npm test          # domain compile, then Node tests
+npm run check     # tsc for src/ and the Next.js project
+npm run build     # domain compile and next build
+npm start         # production server on 127.0.0.1:3000
+npm run dev:clean # same dev server with harness labels hidden
 ```
 
-`SHOW_FIXTURE_CHROME=0` still works the same way. `npm start` and production builds hide them unless `SHOW_FIXTURE_CHROME=1`.
+There is no ESLint script in `package.json`.
 
-Local Supabase now persists workflow aggregates and command receipts. Server-side OpenAI inference powers reviewed overview/inject proposals from the graph. Keep `OPENAI_API_KEY` in `.env.local`; see [Local services setup and boundaries](docs/engineering/LOCAL-SERVICES.md). Synthetic identities remain development-only, not production authentication. This guide supersedes historical fixture-only integration notes below.
+`npm start` hides harness labels unless `SHOW_FIXTURE_CHROME=1`.
 
-## What is implemented
+## Maturity
 
-- GLASSHOUSE v1.0 local facilitated scenario: published template, editable draft, scheduled rehearsal, twelve timed injects, eight fixture roles, six weighted assessment domains, and authorized investigation evidence. See [GLASSHOUSE implementation/run guide](docs/engineering/GLASSHOUSE-IMPLEMENTATION.md) for adaptation limits and instructions. Original scenario material lives under `.private/glasshouse/`; `Strata-Media-Docs/STRATA_GLASSHOUSE_v1.0/` is an import snapshot only.
+Verified in this working tree on November 13, 2026:
 
-- Exercises Calendar with Month/Week grids, date navigation, timezone-aware exercise placement, and filter-preserving links.
-- Accessible verification-state icons/tooltips, Title Case headings, and neutral selection styles without decorative left-edge accents.
+- `npm test`: 76 passing, 0 failing.
+- `npm run check`: passed (`strict` on both TypeScript projects).
+- `npm run build`: passed. Next.js 15.5.29 compiled the marketing page, the product catch-all, `/api`, and `/explore/command-table`. Shared first-load JavaScript was about 103 kB.
 
-Scenario inject authoring defaults to a graph workspace with overview/transition/inject nodes, conditional links, modal editing, drag/zoom controls, list fallback, and targeted requests. Server-side AI generates reviewed narrative proposals stored in Supabase. See [graph specification](docs/engineering/SCENARIO-GRAPH-SPEC.md), [PRD addendum](docs/product/STRATA-CONCEPT.md), and [design conventions](docs/engineering/DESIGN-SYSTEM.md).
+Older notes in [docs/engineering/IMPLEMENTATION-STATUS.md](docs/engineering/IMPLEMENTATION-STATUS.md) cite 36, 69, and 70 tests at different dates. Those are historical. The command above is the current suite. Browser walkthroughs recorded in October 2026 are fixture checks, not a WCAG audit, a load test, or a production acceptance pass. PDF save was not file-inspected in that record.
 
-- Shared MESA design tokens (Obsidian, Mist, Stone, Basalt, Mineral Gold), readable 16px body / 14px controls, Obsidian actions with gold emphasis, Mist surfaces, responsive program and operational layouts.
-- 70 registered canonical screen routes with requirement, component, shell, and dependency references. Legacy HTML URLs redirect to canonical paths.
-- Program navigation: Overview, Exercises, Scenarios, Reports, Actions, Analytics, People, My development, Recommendations, Organization.
-- Explicit fixture interactions for scheduling, scenario drafts, fact review, session controls, commands and receipts, decisions, team notes, report review, corrective actions, and preferences.
-- Synthetic Atlas and Harbor workspaces; role and request-state inspection through **Inspect states**.
+Not built: authentication, multi-user concurrency, a normalized schema, virtualized large tables, realtime collaboration, signed publication, and a hosted demo.
 
-## Honest limitations
+## Publication boundary
 
-This is a **local development implementation, not a production readiness platform**. Saved workflows/proposals persist in Supabase; unsent input and graph layout remain browser-tab preferences. Bundled data and identities are synthetic. Server role guards enforce development scopes but persona switching is not real authentication. Never put confidential production data into this harness.
+Do not put confidential data into this harness. Persona switching is not authentication. Facilitator-only scenario text is still present in client-delivered source (`src/glasshouse.ts`).
 
-Real authentication, realtime collaboration, external messages, signed publication, live export jobs and paid entitlements remain unconnected. Local authoring inference, opt-in bounded automatic actors/adjudication, draft assessments/reports, server workflow checks and persistence are connected; these do not certify production readiness or instructional validity. See [Bounded AI specification](docs/engineering/BOUNDED-AI-SPEC.md).
+The public GitHub history omits `Strata-Media-Docs/` and `.private/`. Those paths are third-party exercise manuals and a facilitator scenario package. They remain in the original local history and were not destroyed there. A clone of the public repository will not contain them. The running GLASSHOUSE adapter is `src/glasshouse.ts`. Details are in [agents-review.md](agents-review.md).
 
-See [implementation status](docs/engineering/IMPLEMENTATION-STATUS.md) for scope, deviations, and verification evidence.
+## Documentation
 
-## Documentation map
-
-- `docs/product/` — product PRD (`STRATA-CONCEPT.md`)
-- `docs/engineering/` — migration, design system, local services, AI/graph/GLASSHOUSE specs, status ledger
-- `docs/reference/` — UI/UX agent build reference
-- `docs/archive/` — closed reviews and superseded PRD snapshots
-- `portfolio-export/mesa-decision-landscape/` — hiring/case-study package (sibling of the app)
+- [agents-review.md](agents-review.md) — technical assessment for engineering reviewers
+- [docs/engineering/MIGRATION.md](docs/engineering/MIGRATION.md) — Next.js strangler boundary
+- [docs/engineering/DESIGN-SYSTEM.md](docs/engineering/DESIGN-SYSTEM.md) — visual and interaction conventions
+- [docs/engineering/LOCAL-SERVICES.md](docs/engineering/LOCAL-SERVICES.md) — database, CSRF, and key boundary
+- [docs/engineering/BOUNDED-AI-SPEC.md](docs/engineering/BOUNDED-AI-SPEC.md) — what the model is allowed to do
+- [docs/engineering/SCENARIO-GRAPH-SPEC.md](docs/engineering/SCENARIO-GRAPH-SPEC.md) — graph as a projection
+- [docs/product/STRATA-CONCEPT.md](docs/product/STRATA-CONCEPT.md) — product specification, not a claim that the platform was validated
+- [technical-due-diligence.md](technical-due-diligence.md) — November 2, 2026 architecture notes. A few host paths in the portfolio-export case study still say `web/`, which was removed in the Next.js move
 
 ## Source map
 
-- `design-tokens.css`: MESA brand and semantic design tokens.
-- `app.css`: shells, components, responsive layouts, accessibility and print styles.
-- `src/contracts.ts`: frontend request, scope, command, and metric contracts.
-- `src/platform.ts`: synthetic adapter, projection rules, mutation validation, idempotency.
-- `src/routes.ts`: screen registry and canonical route matching.
-- `src/views-*.ts` / `src/workflow-*-views.ts`: page renderers (HTML strings during strangler migration).
-- `src/session-controller.ts`: routing, forms, dialogs, lifecycle feedback, downloads; paints into React via `onPaint`.
-- `src/workflow-model.ts` / `workflow-commands.ts`: versioned scenario definitions, pinned exercise state, finding corrections, report approval and immutable publication snapshots.
-- `src/workflow-package.ts` / `workflow-exports.ts`: strict synthetic package handling, calendar files, and published JSON/DOCX/PDF print exports.
-- `app/`: Next.js App Router host (`MesaHost`), shells, screen registry, and `/api` Route Handlers.
-- `tests/`: focused automated checks importing domain modules from `src/`.
-
-Approved verification of authoring, exercise, and review/reporting is recorded in `docs/engineering/IMPLEMENTATION-STATUS.md`: dated automated tests, browser end-to-end workflows, responsive/keyboard checks, and downloaded DOCX structural inspection. PDF saving still needs a standard-browser print check; production authority, cross-browser/screen-reader acceptance, and deferred product areas are not certified by these fixture checks.
+- `src/contracts.ts` — request states, command receipts, metric display states, screen shape
+- `src/routes.ts` — 70-screen registry
+- `src/platform.ts` — scope checks and redaction
+- `src/workflow-model.ts`, `src/workflow-commands.ts` — definitions, validation, publish, session commands
+- `src/improvement-model.ts`, `src/improvement-views.ts` — coverage, filters, retest comparison, analytics tables
+- `src/scenario-graph.ts` — graph projection and pointer interaction
+- `src/session-controller.ts` — client orchestration
+- `backend/api.mjs`, `backend/repository.mjs`, `backend/ai-service.mjs` — local API, compare-and-swap, AI leases
+- `app/` — Next.js host, shells, marketing site, command-table route
+- `explorations/command-table/` — isolated lighting lab
+- `tests/` — domain and renderer checks

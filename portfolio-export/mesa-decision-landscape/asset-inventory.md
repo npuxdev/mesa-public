@@ -96,7 +96,7 @@ Not rendered to PNG.
 ## Open questions
 
 1. May the public case study use the names MESA, STRATA, Atlas Response Group, and Harbor Continuity Group?
-2. May GLASSHOUSE be named, or should the scenario adapter stay out of public copy? Originals are under `.private/glasshouse/`.
+2. May GLASSHOUSE be named, or should the scenario adapter stay out of public copy? The public history keeps the adapter in `src/glasshouse.ts` and omits the facilitator source package.
 3. Who else should be credited? Git history is one commit by Nick (`npulido@gmail.com`). No team list is in the repo.
 4. Is there a portfolio site URL or CMS slug to match `seo/`?
 5. Open-source intent? `package.json` is private. `open-source-positioning.md` was not written.

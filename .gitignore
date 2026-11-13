@@ -8,3 +8,8 @@ web-dist/
 supabase/.temp/
 supabase/.branches/
 portfolio-export/mesa-decision-landscape/videos/.tmp-*/
+.DS_Store
+**/.DS_Store
+tsconfig.tsbuildinfo
+pnpm-lock.yaml
+pnpm-workspace.yaml
