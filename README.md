@@ -180,3 +180,9 @@ The public GitHub history omits `Strata-Media-Docs/` and `.private/`. Those path
 - `app/` — Next.js host, shells, marketing site, command-table route
 - `explorations/command-table/` — isolated lighting lab
 - `tests/` — domain and renderer checks
+
+## Copyright
+
+Copyright 2026 Nicholas Pulido. Nicholas Pulido is the owner of this code.
+
+No license is granted. You may not use, copy, modify, or distribute the code without prior written permission from the owner.

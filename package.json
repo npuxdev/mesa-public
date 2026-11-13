@@ -2,6 +2,7 @@
   "name": "strata-readiness-ui",
   "version": "0.2.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "build:domain": "tsc -p tsconfig.domain.json",
