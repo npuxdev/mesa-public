@@ -20,7 +20,11 @@ Screens for sign-in, invitations, billing, entitlements, and external export exi
 
 ## Product surfaces
 
-These four screens are the core of the local Atlas fixture, captured November 13, 2026 from `npm run dev` at http://127.0.0.1:3000. The banner is the development harness (local services, synthetic identities, human review). The records are fixtures, not a customer workspace.
+Captured November 13, 2026 from `npm run dev` at http://127.0.0.1:3000. Product screens include the development harness banner (local services, synthetic identities, human review). The records are fixtures, not a customer workspace.
+
+The marketing home is a separate React page. Its hero frame is a composed illustration, and the impact figures later on that page are not computed from the analytics model.
+
+![Marketing home with the MESA hero and a composed product frame](docs/screenshots/01-marketing-home.png)
 
 The scenario graph projects a published definition. Solid arrows are recorded conditions. Dashed lines group nodes under the overview and do not set execution order. Dragging a node stores layout only.
 
@@ -95,11 +99,10 @@ A consequential edit is a command with an expected version and an idempotency ke
 
 ## More screenshots
 
-Same capture session. The four core screens are inline above.
+Same capture session. The screens above are shown inline.
 
 | Screen | File |
 | --- | --- |
-| Marketing home | [docs/screenshots/01-marketing-home.png](docs/screenshots/01-marketing-home.png) |
 | Program overview | [docs/screenshots/02-program-overview.png](docs/screenshots/02-program-overview.png) |
 | Exercise calendar | [docs/screenshots/05-exercise-calendar.png](docs/screenshots/05-exercise-calendar.png) |
 | Facilitator control | [docs/screenshots/06-facilitator-control.png](docs/screenshots/06-facilitator-control.png) |
