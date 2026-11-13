@@ -18,6 +18,26 @@ The exercised domain is operational rehearsal: incident response, disaster recov
 
 Screens for sign-in, invitations, billing, entitlements, and external export exist as routes. Their actions say the service is unavailable.
 
+## Product surfaces
+
+These four screens are the core of the local Atlas fixture, captured November 13, 2026 from `npm run dev` at http://127.0.0.1:3000. The banner is the development harness (local services, synthetic identities, human review). The records are fixtures, not a customer workspace.
+
+The scenario graph projects a published definition. Solid arrows are recorded conditions. Dashed lines group nodes under the overview and do not set execution order. Dragging a node stores layout only.
+
+![Scenario graph for the published ransomware scenario, with overview, transitions, and an inspector](docs/screenshots/04-scenario-graph.png)
+
+Program analytics can show a percent only for reviewed opportunities over eligible released ones. Rubric attainment stays **Suppressed** when the cohort, evidence, or comparison conditions do not support a score.
+
+![Program analytics with search, period filter, and a suppressed rubric attainment](docs/screenshots/03-analytics-metrics.png)
+
+The same selection is a role-by-opportunity table. Unreleased cues and missing reviews stay "Not observed / unresolved" instead of a zero.
+
+![Role by opportunity coverage table with eligibility and reviewed evidence](docs/screenshots/03-analytics-coverage-table.png)
+
+A finding with no eligible observation cannot be approved. N/O and N/A stay distinct from numeric zero, and the approve action states that every citation has to be inspected.
+
+![Finding review for an unobserved executive escalation, with no qualifying evidence](docs/screenshots/07-evidence-review.png)
+
 ## Stack
 
 | Layer | Choice |
@@ -73,20 +93,16 @@ A consequential edit is a command with an expected version and an idempotency ke
 
 **Command-table lab.** `/explore/command-table` is an isolated lighting workbench (commit `0c4f194`). It is not part of the exercise product.
 
-## Screenshots
+## More screenshots
 
-Captured November 13, 2026 from the local dev server at `http://127.0.0.1:3000` with fixture chrome on (the default `npm run dev` banner: local services, synthetic identities, human review). Data is the bundled Atlas fixture, not a customer workspace.
+Same capture session. The four core screens are inline above.
 
 | Screen | File |
 | --- | --- |
 | Marketing home | [docs/screenshots/01-marketing-home.png](docs/screenshots/01-marketing-home.png) |
 | Program overview | [docs/screenshots/02-program-overview.png](docs/screenshots/02-program-overview.png) |
-| Analytics metrics, including a suppressed attainment | [docs/screenshots/03-analytics-metrics.png](docs/screenshots/03-analytics-metrics.png) |
-| Role × opportunity coverage table | [docs/screenshots/03-analytics-coverage-table.png](docs/screenshots/03-analytics-coverage-table.png) |
-| Scenario graph | [docs/screenshots/04-scenario-graph.png](docs/screenshots/04-scenario-graph.png) |
 | Exercise calendar | [docs/screenshots/05-exercise-calendar.png](docs/screenshots/05-exercise-calendar.png) |
 | Facilitator control | [docs/screenshots/06-facilitator-control.png](docs/screenshots/06-facilitator-control.png) |
-| Finding with no qualifying evidence | [docs/screenshots/07-evidence-review.png](docs/screenshots/07-evidence-review.png) |
 | Corrective-action table | [docs/screenshots/08-corrective-actions.png](docs/screenshots/08-corrective-actions.png) |
 | Published report | [docs/screenshots/09-published-report.png](docs/screenshots/09-published-report.png) |
 | Published report at 390×844 | [docs/screenshots/10-published-report-mobile.png](docs/screenshots/10-published-report-mobile.png) |
